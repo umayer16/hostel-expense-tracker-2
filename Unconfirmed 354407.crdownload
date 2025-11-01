@@ -1,0 +1,53 @@
+import os
+import json
+import pytest
+from project import add_expense, summarize_expenses, expenses_over_time, load_expenses, save_expenses, visualize_expenses
+
+DATA_FILE = "expenses.json"
+
+@pytest.fixture(autouse=True)
+def clear_data():
+    """Clear data before each test and restore afterward."""
+    backup = None
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            backup = json.load(f)
+    save_expenses([])
+    yield
+    if backup is not None:
+        save_expenses(backup)
+    else:
+        if os.path.exists(DATA_FILE):
+            os.remove(DATA_FILE)
+
+def test_add_expense():
+    add_expense("Food", 100, "2025-10-03")
+    expenses = load_expenses()
+    assert len(expenses) == 1
+    assert expenses[0]["category"] == "Food"
+    assert expenses[0]["amount"] == 100.0
+    assert expenses[0]["date"] == "2025-10-03"
+
+def test_summarize_expenses():
+    add_expense("Food", 100, "2025-10-03")
+    add_expense("Transport", 50, "2025-10-03")
+    add_expense("Food", 50, "2025-10-04")
+    summary = summarize_expenses()
+    assert summary["Food"] == 150
+    assert summary["Transport"] == 50
+
+def test_expenses_over_time():
+    add_expense("Food", 100, "2025-10-03")
+    add_expense("Books", 50, "2025-10-03")
+    add_expense("Food", 50, "2025-10-04")
+    daily_totals = expenses_over_time()
+    assert daily_totals["2025-10-03"] == 150
+    assert daily_totals["2025-10-04"] == 50
+
+def test_visualize_expenses_runs():
+    add_expense("Test", 10, "2025-10-03")
+    try:
+        visualize_expenses()
+    except Exception as e:
+        pytest.fail(f"visualize_expenses() raised {e}")
+
